@@ -6,14 +6,14 @@ Its purpose is to make future animation code compatible with the user's actual M
 
 ## Confirmed local environment
 
-- Package: \`manimgl\`
+- Package: `manimgl`
 - Version: **1.7.2**
-- Python package location: \`C:\Users\Dell\AppData\Roaming\Python\Python312\site-packages\`
-- Editable source location: \`D:\manim-master\`
+- Python package location: `C:\Users\Dell\AppData\Roaming\Python\Python312\site-packages`
+- Editable source location: `D:\manim-master`
 - Installation mode: editable project installation
 - Python series indicated by the package path: 3.12
 
-Because this is an editable installation, the source in \`D:\manim-master\` is the final authority for the APIs actually available on the user's computer. The package version is known, but the exact Git commit is not yet recorded.
+Because this is an editable installation, the source in `D:\manim-master` is the final authority for the APIs actually available on the user's computer. The package version is known, but the exact Git commit is not yet recorded.
 
 
 ## 1. Non-negotiable framework rule
