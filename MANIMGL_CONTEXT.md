@@ -4,6 +4,18 @@ This file is the shared coding guide for both **GCSE-Math-Codes** and **Space-Ex
 
 Its purpose is to make future animation code compatible with the user's actual ManimGL environment and to prevent accidental use of Manim Community Edition (ManimCE) APIs.
 
+## Confirmed local environment
+
+- Package: \`manimgl\`
+- Version: **1.7.2**
+- Python package location: \`C:\Users\Dell\AppData\Roaming\Python\Python312\site-packages\`
+- Editable source location: \`D:\manim-master\`
+- Installation mode: editable project installation
+- Python series indicated by the package path: 3.12
+
+Because this is an editable installation, the source in \`D:\manim-master\` is the final authority for the APIs actually available on the user's computer. The package version is known, but the exact Git commit is not yet recorded.
+
+
 ## 1. Non-negotiable framework rule
 
 This codebase uses **3Blue1Brown's ManimGL / `manimlib`**.
@@ -29,7 +41,7 @@ When generating or repairing code, use this priority:
 3. The matching version or commit of `3b1b/manim`, plus relevant examples from `3b1b/videos`.
 4. General model knowledge only for framework-independent Python, mathematics, and design reasoning.
 
-Do not assume that current upstream ManimGL and the user's installed copy are identical. No ManimGL version or commit is pinned in these repositories yet.
+Do not assume that current upstream ManimGL and the user's installed copy are identical. The installed package version is ManimGL 1.7.2; the exact Git commit is not yet recorded. If upstream source conflicts with the editable source in `D:\manim-master`, the local editable source wins.
 
 ## 3. Codebase snapshot
 
@@ -195,7 +207,7 @@ Do not reproduce these patterns in new code:
 2. **Hard-coded absolute paths:** several texture/image paths are tied to one machine.
 3. **Wildcard-import side effects:** some files use names such as `np` or `Path` without explicit imports.
 4. **Unused imports:** a few files import unrelated names such as `turtle.pos` or `email.header`.
-5. **Unpinned framework version:** an API may differ between the local installation and current upstream ManimGL.
+5. **Commit not recorded:** the package is confirmed as ManimGL 1.7.2, but local editable changes or a different source commit may still differ from current upstream ManimGL.
 6. **Fragile text indices:** `Tex` and `Text` slices can change when the source string changes.
 7. **Updater conflicts:** moving an object manually while an updater still controls it can produce surprising results.
 
