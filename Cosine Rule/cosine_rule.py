@@ -629,7 +629,355 @@ class CosineRuleIntro(InteractiveScene):
             FadeOut(angle_label), FadeOut(dyn_angle_arc),
             FadeOut(VGroup(*full_eq2[:-1])), FadeOut(cos_lt90), FadeOut(subtracted_note), FadeOut(c_flash2),
             FadeOut(name_reveal), FadeOut(term_box_lt), FadeOut(cosine_angle_soln2),
-            FadeOut(flying_copy2),
+            FadeOut(flying_copy2),FadeOut(term_box_lt),
             run_time=1.5,
         )
         self.wait()
+
+
+# ============================================================
+#  STYLE CONSTANTS -- standard white "exam paper" background,
+#  continuing the established palette. Colours here track ROLE
+#  (known side / target side / given angle), matching the SAS/SSS
+#  worked-example convention: whichever side you choose to solve for
+#  becomes "a" and is coloured orange, regardless of which letter it
+#  would have had elsewhere.
+# ============================================================
+KNOWN1_COLOR   = "#00B8A9"   # teal   -- first known side (8cm / b)
+KNOWN2_COLOR   = "#7B2CBF"   # purple -- second known side (11cm / c)
+TARGET_COLOR   = "#FF6B00"   # orange -- the side being solved for (a)
+ANGLE_COLOR    = "#750A0A"   # red    -- the given angle (72deg / A)
+CORRECTION_COLOR = "#FFB800" # gold   -- the -2bc cos A term
+ANSWER_COLOR   = "#0074FF"   # blue   -- final boxed answer
+SAS_EMPHASIS   = "#1E56C7"   # bright blue -- this example is SAS
+SSS_DEEMPHASIS = "#B0B0B0"   # light grey  -- SSS, not this example
+QUESTION_COLOR = "#8B0303"   # dark red -- rhetorical bridge lines
+NEUTRAL_SIDE   = "#555555"   # dark grey -- unlabelled generic side
+
+# Real SAS triangle, built directly from the example's own numbers
+# (8cm, 11cm, 72 degrees) at a fixed scale -- verified numerically
+# before use: the resulting third side works out to ~11.43 scene
+# units-in-cm, matching the law-of-cosines answer of 11.4286 almost
+# exactly, so the diagram is genuinely consistent with the arithmetic.
+SCALE = 0.28
+V_A = np.array([-0.3, 1.4, 0.0])     # the 72-degree vertex (angle A)
+DIR_TO_C = 250                        # degrees, side b's direction
+DIR_TO_B = DIR_TO_C + 72              # degrees, side c's direction
+V_C = V_A + 8 * SCALE * np.array([np.cos(np.radians(DIR_TO_C)), np.sin(np.radians(DIR_TO_C)), 0.0])
+V_B = V_A + 11 * SCALE * np.array([np.cos(np.radians(DIR_TO_B)), np.sin(np.radians(DIR_TO_B)), 0.0])
+
+GENERIC_SHIFT = np.array([-4.2, 0.0, 0.0])   # where the SAS card sits before the transition
+
+
+def label_at(text, position, color, font_size=34):
+    return Tex(text, font_size=font_size, fill_color=color).move_to(np.array(position))
+
+
+class CosineRuleExampleSAS(InteractiveScene):
+    def construct(self):
+        # grid = NumberPlane(
+        #     axis_config={"stroke_color": GREY, "stroke_opacity": 0.3},
+        #     background_line_style={"stroke_color": GREY, "stroke_width": 2, "stroke_opacity": 0.3},
+        # )
+        # self.add(grid)
+        
+        backdrop = Rectangle(width=FRAME_WIDTH + 0.5, height=FRAME_HEIGHT + 0.5)
+        backdrop.set_fill(WHITE, opacity=1).set_stroke(width=0)
+        self.add(backdrop)
+
+        # ============================================================
+        # "Alright, we have the cosine rule, but when to apply it to
+        # our questions. There are two cases, first when two sides and
+        # the angle between them are given, in other word SAS, or
+        # second when all three sides are provided, SSS."
+        # ============================================================
+        GA, GB, GC = V_A + GENERIC_SHIFT, V_B + GENERIC_SHIFT, V_C + GENERIC_SHIFT
+
+        sas_side_b = Line(GA, GC).set_stroke(KNOWN1_COLOR, width=4)
+        sas_side_c = Line(GA, GB).set_stroke(KNOWN2_COLOR, width=4)
+        sas_side_a = Line(GB, GC).set_stroke(NEUTRAL_SIDE, width=3)
+        sas_arc = Arc(radius=0.4, start_angle=DIR_TO_C * DEGREES, angle=72 * DEGREES, arc_center=GA)
+        sas_arc.set_stroke(ANGLE_COLOR, width=2.5)
+
+        label_x = label_at("x", (GA + GC) / 2 + np.array([-0.35, 0.12, 0]), KNOWN1_COLOR)
+        label_y = label_at("y", (GA + GB) / 2 + np.array([0.35, 0.12, 0]), KNOWN2_COLOR)
+        label_theta = label_at("\\theta", GA + np.array([0.16, -0.57, 0]), ANGLE_COLOR, font_size=30)
+
+        sas_heading = Text("SAS", font_size=40).set_color(BLACK)
+        sas_heading.move_to(np.array([-3.95, 2.3, 0.0]))
+
+        S1, S2, S3 = np.array([2.9, 1.3, 0.0]), np.array([5.3, -0.5, 0.0]), np.array([2.2, -0.8, 0.0])
+        sss_side_1 = Line(S1, S2).set_stroke(KNOWN1_COLOR, width=4)
+        sss_side_2 = Line(S2, S3).set_stroke(KNOWN2_COLOR, width=4)
+        sss_side_3 = Line(S3, S1).set_stroke(TARGET_COLOR, width=4)
+        label_p = label_at("p", (S1 + S2) / 2 + np.array([0.35, 0.05, 0]), KNOWN1_COLOR)
+        label_q = label_at("q", (S2 + S3) / 2 + np.array([0.0, -0.35, 0]), KNOWN2_COLOR)
+        label_r = label_at("r", (S3 + S1) / 2 + np.array([-0.35, 0.0, 0]), TARGET_COLOR)
+
+        sss_heading = Text("SSS", font_size=40).set_color(BLACK)
+        sss_heading.move_to(np.array([3.47, 2.3, 0.0]))
+
+        sss_group = VGroup(sss_side_1, sss_side_2, sss_side_3, label_p, label_q, label_r)
+
+        self.play(Write(sas_heading), ShowCreation(VGroup(sas_side_b, sas_side_c, sas_side_a)))
+        self.play(ShowCreation(sas_arc), Write(label_x), Write(label_y), Write(label_theta))
+        self.wait(0.5)
+        self.play(Write(sss_heading), ShowCreation(VGroup(sss_side_1, sss_side_2, sss_side_3)))
+        self.play(Write(label_p), Write(label_q), Write(label_r))
+        self.wait(1.5)
+
+        # ============================================================
+        # "Let's start with an example. There is a triangle in which
+        # one side is 8cm and the other is 11cm. The angle between
+        # them is 72 degrees. And we are required to find the length
+        # of the third side."
+        #
+        # SSS triangle is removed but its heading stays. Both headings
+        # move to the top and recolour (SAS emphasised, SSS greyed
+        # out), while the SAS triangle simultaneously shifts back to
+        # centre and its arbitrary labels become the example's real
+        # numbers.
+        # ============================================================
+        self.play(FadeOut(sss_group), run_time=0.8)
+
+        real_label_8 = label_at("8", (V_A + V_C) / 2 + np.array([-0.35, 0.12, 0]), KNOWN1_COLOR)
+        real_label_11 = label_at("11", (V_A + V_B) / 2 + np.array([0.35, 0.12, 0]), KNOWN2_COLOR)
+        real_label_72 = label_at("72^\\circ", V_A + np.array([0.28, -0.57, 0]), ANGLE_COLOR, font_size=28)
+
+        target_side = DashedLine(V_B, V_C, dash_length=0.12).set_stroke(TARGET_COLOR, width=4)
+        target_q = Text("?", font_size=32).set_color(TARGET_COLOR)
+        target_q.move_to((V_B + V_C) / 2 + np.array([0.0, -0.4, 0.0]))
+
+        self.play(
+            sas_heading.animate.move_to([-2.2, 3.3, 0]).set_color(SAS_EMPHASIS),
+            sss_heading.animate.move_to([2.2, 3.3, 0]).set_color(SSS_DEEMPHASIS),
+            sas_side_b.animate.shift(-GENERIC_SHIFT),
+            sas_side_c.animate.shift(-GENERIC_SHIFT),
+            sas_arc.animate.shift(-GENERIC_SHIFT),
+            ReplacementTransform(label_x, real_label_8),
+            ReplacementTransform(label_y, real_label_11),
+            ReplacementTransform(label_theta, real_label_72),
+            sas_side_a.animate.replace(target_side).set_opacity(0),
+            FadeIn(target_side),
+            FadeIn(target_q),
+            run_time=2.2,
+        )
+        self.wait(1.5)
+        self.remove(sas_side_a)   # remove the faded-out copy of the dashed line, leaving only the visible one
+        # ============================================================
+        # "Now in the formula sheet, the cosine rule is given as
+        # a^2 = b^2 + c^2 - 2bc cos A."
+        # ============================================================
+        # We split the string into granular pieces so we can animate 
+        # the variables (b, c, A) independently from the exponents/operators.
+        sheet_eq = Tex(
+            "a^2", "=", "b", "^2", "+", "c", "^2", "-", "2", "b", "c", "\\cos ", "A",
+            font_size=42, fill_color=BLACK, tex_to_color_map={
+             "a^2": TARGET_COLOR, "b": KNOWN1_COLOR, "^2" : BLACK, "c": KNOWN2_COLOR, "+" : BLACK, "-" : BLACK,
+             "\\cos": CORRECTION_COLOR, "A": CORRECTION_COLOR,
+             },
+        )
+            
+        sheet_eq.move_to(np.array([0.5, -1.9, 0.0]))
+        sheet_border = SurroundingRectangle(sheet_eq, buff=0.35).set_color(BLACK).set_stroke(width=1.5)
+        sheet_label = Text("formula sheet", font_size=20).set_color(GREY)
+        sheet_label.next_to(sheet_border, UP, buff=0.1).align_to(sheet_border, LEFT)
+
+        self.play(ShowCreation(sheet_border), Write(sheet_label))
+        self.play(Write(sheet_eq))
+        self.wait(1.5)
+
+        # ============================================================
+        # "But wait, earlier we wrote the cosine rule using (c) on the
+        # left-hand side. So why is it (a) here? Well, the letters
+        # themselves don't really matter. What matters is how we label
+        # the triangle."
+        # ============================================================
+        bridge1 = Text("Why (a), not (c)?", font_size=32).set_color(QUESTION_COLOR)
+        bridge1.next_to(sheet_border, DOWN, buff=0.6)
+        self.play(Write(bridge1))
+        self.play(bridge1.animate.shift(UP * 0.15), rate_func=there_and_back, run_time=1.2)
+        self.wait(0.5)
+
+        bridge2 = Text("It's about how YOU label the triangle", font_size=28).set_color(QUESTION_COLOR)
+        bridge2.move_to(bridge1)
+        self.play(ReplacementTransform(bridge1, bridge2))
+        self.wait(1.5)
+        self.play(FadeOut(bridge2))
+
+        # ============================================================
+        # "We choose the side we want to find and call it (a). The
+        # angle opposite to it will then be (A). And the other two
+        # sides become (b) and (c)."
+        #
+        # The diagram gets relabelled to match -- the target side's
+        # "?" becomes "a", the 72-degree angle is confirmed as "A",
+        # and the two known sides pick up "b" and "c" alongside their
+        # numbers.
+        # ============================================================
+        label_a_diagram = label_at("a", (V_B + V_C) / 2 + np.array([0.0, -0.35, 0.0]), TARGET_COLOR)
+        label_A_diagram = label_at("A", V_A + np.array([0.15, 0.2, 0.0]), ANGLE_COLOR, font_size=30)
+        label_b_diagram = label_at("b", (V_A + V_C) / 2 + np.array([-0.35, -0.32, 0.0]), KNOWN1_COLOR, font_size=28)
+        label_c_diagram = label_at("c", (V_A + V_B) / 2 + np.array([0.45, -0.15, 0.0]), KNOWN2_COLOR, font_size=28)
+
+        self.play(ReplacementTransform(target_q, label_a_diagram))
+        self.wait(0.3)
+        self.play(FadeIn(label_A_diagram))
+        self.wait(0.3)
+        self.play(FadeIn(label_b_diagram), FadeIn(label_c_diagram))
+        self.wait(1.5)
+
+        # ============================================================
+        # "Now we can simply substitute the values. Since b=8 and
+        # c=11, we get: 8 squared + 11 squared - two times eight times
+        # 11 times cos 72."
+        # ============================================================
+        # ============================================================
+        # NEW FLYING SUBSTITUTION ANIMATION
+        # ============================================================
+        self.play(FadeOut(sheet_border), FadeOut(sheet_label))
+
+        # 1. Define the substituted target structurally
+        # Separating \cos completely from parentheses to avoid LaTeX compilation errors
+        substituted_eq = Tex(
+            "a^2", "=", "8", "^2", "+", "11", "^2", "-", 
+            "2(", "8", ")(", "11", ")", "\\cos", "(", "72^\\circ", ")",
+            font_size=38, fill_color=BLACK)
+
+        # 2. Re-apply colors using exact indices so we don't break the string order
+        # Indices: [2]=first 8, [5]=first 11, [9]=second 8, [11]=s")",econd 11, [13]=\cos, [15]=72
+        substituted_eq[0].set_color(TARGET_COLOR)
+        substituted_eq[3].set_color(KNOWN1_COLOR)
+        substituted_eq[6:8].set_color(KNOWN2_COLOR)
+        
+        # Color the correction part
+        substituted_eq[12].set_color(KNOWN1_COLOR)        # Inside parens: 8
+        substituted_eq[15:17].set_color(KNOWN2_COLOR)       # Inside parens: 11
+        substituted_eq[18:21].set_color(CORRECTION_COLOR)   # \cos
+        substituted_eq[22:25].set_color(ANGLE_COLOR)   # 72^\circ
+
+        substituted_eq.move_to(sheet_eq)
+
+        # 3. Make copies of the diagram labels to act as the "flying objects"
+        copy_8_1 = real_label_8.copy()
+        copy_8_2 = real_label_8.copy()
+        copy_11_1 = real_label_11.copy()
+        copy_11_2 = real_label_11.copy()
+        copy_72 = real_label_72.copy()
+
+        #4. Animate the complex structural replacement
+        self.play(
+            # Base equation structure shifting into new places
+            ReplacementTransform(sheet_eq[0], substituted_eq[0]),
+            ReplacementTransform(sheet_eq[1], substituted_eq[1]),
+            ReplacementTransform(sheet_eq[2], substituted_eq[2]),
+            ReplacementTransform(sheet_eq[4], substituted_eq[4]),  # First ^2
+            ReplacementTransform(sheet_eq[5], substituted_eq[5]),
+            ReplacementTransform(sheet_eq[7], substituted_eq[8]),  # Second ^2
+            ReplacementTransform(sheet_eq[8], substituted_eq[9]),
+
+            
+            # The structure of the 2bc cos A term (parens fading in)
+            ReplacementTransform(sheet_eq[9], substituted_eq[10:12]),   # "2" -> "2("
+            ReplacementTransform(sheet_eq[12:15], substituted_eq[18:21]), # "\cos" -> "\cos"
+            FadeIn(substituted_eq[13:15], shift=UP*0.2),               # ")("
+            FadeIn(substituted_eq[17], shift=UP*0.2),               # ")"
+            FadeIn(substituted_eq[21], shift=UP*0.2),               # "("
+            FadeIn(substituted_eq[25], shift=UP*0.2),               # "("
+            
+            # The old variables (b, c, b, c, A) visually drop down and fade away
+            FadeOut(sheet_eq[3], shift=DOWN*0.5),
+            FadeOut(sheet_eq[6], shift=DOWN*0.5),
+            FadeOut(sheet_eq[10], shift=DOWN*0.5),
+            FadeOut(sheet_eq[11], shift=DOWN*0.5),
+            FadeOut(sheet_eq[15], shift=DOWN*0.5),
+        
+            
+            # The diagram copies FLY into the empty spaces left behind!
+            # Since the destination slots are mapped to CORRECTION_COLOR, 
+            # they will smoothly morph to gold as they land.
+            ReplacementTransform(copy_8_1, substituted_eq[3]),
+            ReplacementTransform(copy_8_2, substituted_eq[12]),
+            ReplacementTransform(copy_11_1, substituted_eq[6:8]),
+            ReplacementTransform(copy_11_2, substituted_eq[15:17]),
+            ReplacementTransform(copy_72, substituted_eq[22:25]),
+            
+            run_time=2.5
+        )
+        self.wait(1.5)
+        
+        # Ensure the final object is properly registered to the scene graph
+        self.add(substituted_eq)
+        self.wait(1.5)
+        # ============================================================
+        # "Calculating each part gives us 64, 121, and the cosine term
+        # gives us 54.39."
+        # ============================================================
+        calculated_eq = Tex(
+            "a^2", "=", "64", "+", "121", "-", "54.39", font_size=38, fill_color=BLACK,
+            tex_to_color_map={
+                "a^2": TARGET_COLOR, "64": KNOWN1_COLOR, "121": KNOWN2_COLOR, "54.39": CORRECTION_COLOR,
+            },
+        )
+        calculated_eq.move_to(substituted_eq)
+        self.play(ReplacementTransform(substituted_eq[0], calculated_eq[0]), 
+                  ReplacementTransform(substituted_eq[1], calculated_eq[1]), 
+                  ReplacementTransform(substituted_eq[2], calculated_eq[2]), 
+                  ReplacementTransform(substituted_eq[3:5], calculated_eq[3:5]), 
+                  ReplacementTransform(substituted_eq[5], calculated_eq[5]), 
+                  ReplacementTransform(substituted_eq[6:9], calculated_eq[6:9]), 
+                  ReplacementTransform(substituted_eq[9], calculated_eq[9]), 
+                  ReplacementTransform(substituted_eq[10:26], calculated_eq[10:16]), 
+                  run_time=1.8)
+        self.wait(1.5)
+
+        # ============================================================
+        # "Which on further resolving gives us 130.61."
+        # ============================================================
+        resolved_eq = Tex(
+            "a^2", "= ", "130.61", font_size=38, fill_color=BLACK,
+            tex_to_color_map={"a^2": TARGET_COLOR},
+        )
+        resolved_eq.move_to(calculated_eq)
+        self.play(ReplacementTransform(calculated_eq[0], resolved_eq[0]),
+                  ReplacementTransform(calculated_eq[1], resolved_eq[1]),
+                  ReplacementTransform(calculated_eq[2], resolved_eq[2]),
+            ReplacementTransform(calculated_eq[3:16], resolved_eq[3:9]), 
+                  run_time=1.4)
+        self.wait(1.5)
+
+        # ============================================================
+        # "And since we want to find a, we take the square root of
+        # both sides. So, a = root of 130.61, approximately 11.42."
+        #
+        # A genuinely new step (not a further simplification of the
+        # same statement) -- built as a fresh equation with its own
+        # "=" rather than transforming resolved_eq in place. The "√"
+        # appearing is itself the visual cue for "square root both
+        # sides", so no separate annotation is needed.
+        # ============================================================
+        final_eq = Tex(
+            "a", "=", "\\sqrt{130.61}", "\\approx", "11.42", font_size=40, fill_color=BLACK,
+            tex_to_color_map={"a": TARGET_COLOR, "11.42": TARGET_COLOR},
+        )
+        final_eq.next_to(resolved_eq, DOWN, buff=0.5)
+        self.play(Write(final_eq), run_time=1.6)
+        self.wait(1.5)
+
+        # ============================================================
+        # "Therefore, the length of the third side is approximately
+        # 11.42 centimetres."
+        #
+        # The answer returns to the diagram rather than continuing to
+        # stack further down the page.
+        # ============================================================
+        answer_box = SurroundingRectangle(final_eq["11.42"], buff=0.12).set_color(ANSWER_COLOR)
+        answer_text = final_eq["11.42"].scale(0.8).copy()
+
+        self.play(ShowCreation(answer_box))
+        self.play(answer_text.animate.next_to(label_a_diagram, RIGHT, buff = 0.4))
+        self.wait(2)
+        self.play(FadeOut(answer_box), FadeOut(answer_text), FadeOut(final_eq), FadeOut(resolved_eq), FadeOut(calculated_eq), 
+                  FadeOut(substituted_eq), FadeOut(real_label_8), FadeOut(real_label_11), FadeOut(real_label_72), 
+                  FadeOut(label_A_diagram), FadeOut(label_b_diagram), FadeOut(label_c_diagram),FadeOut(sas_side_b),
+                  FadeOut(sas_side_c), FadeOut(sas_arc), FadeOut(target_side), FadeOut(label_a_diagram))
