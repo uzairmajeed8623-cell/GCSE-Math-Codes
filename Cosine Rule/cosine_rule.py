@@ -667,7 +667,15 @@ V_C = V_A + 8 * SCALE * np.array([np.cos(np.radians(DIR_TO_C)), np.sin(np.radian
 V_B = V_A + 11 * SCALE * np.array([np.cos(np.radians(DIR_TO_B)), np.sin(np.radians(DIR_TO_B)), 0.0])
 
 GENERIC_SHIFT = np.array([-4.2, 0.0, 0.0])   # where the SAS card sits before the transition
-
+KNOWN_A_COLOR  = "#00B8A9"   # teal   -- side a (LN, opposite the target angle)
+KNOWN_B_COLOR  = "#7B2CBF"   # purple -- side b (MN)
+KNOWN_C_COLOR  = "#FF6B00"   # orange -- side c (ML)
+ANGLE_COLOR    = "#750A0A"   # red    -- angle A (the target this time, marked with "?" then "A")
+CORRECTION_COLOR = "#FFB800" # gold   -- the -2bc cos A term
+ANSWER_COLOR   = "#0074FF"   # blue   -- final boxed answer
+EMPHASIS_BLUE  = "#1E56C7"   # bright blue -- this example is SSS
+DEEMPHASIS_GREY = "#B0B0B0"  # light grey  -- SAS, not this example
+QUESTION_COLOR = "#8B0303"   # dark red -- rhetorical bridge lines
 
 def label_at(text, position, color, font_size=34):
     return Tex(text, font_size=font_size, fill_color=color).move_to(np.array(position))
@@ -675,11 +683,7 @@ def label_at(text, position, color, font_size=34):
 
 class CosineRuleExampleSAS(InteractiveScene):
     def construct(self):
-        # grid = NumberPlane(
-        #     axis_config={"stroke_color": GREY, "stroke_opacity": 0.3},
-        #     background_line_style={"stroke_color": GREY, "stroke_width": 2, "stroke_opacity": 0.3},
-        # )
-        # self.add(grid)
+        
         
         backdrop = Rectangle(width=FRAME_WIDTH + 0.5, height=FRAME_HEIGHT + 0.5)
         backdrop.set_fill(WHITE, opacity=1).set_stroke(width=0)
@@ -981,3 +985,297 @@ class CosineRuleExampleSAS(InteractiveScene):
                   FadeOut(substituted_eq), FadeOut(real_label_8), FadeOut(real_label_11), FadeOut(real_label_72), 
                   FadeOut(label_A_diagram), FadeOut(label_b_diagram), FadeOut(label_c_diagram),FadeOut(sas_side_b),
                   FadeOut(sas_side_c), FadeOut(sas_arc), FadeOut(target_side), FadeOut(label_a_diagram))
+
+
+
+
+
+# Triangle LMN built directly from the three given side lengths
+# (a=3.4=LN, b=6.1=MN, c=6.2=ML) via the standard SSS construction
+# (place M and N, then solve for L from the two remaining distances).
+# Verified numerically before use: reconstructed side lengths match
+# a/b/c exactly, and the angle at M works out to ~32.08 degrees --
+# consistent with the script's 31.8 degrees once cos A is rounded to
+# 0.85 first (arccos(0.85) = 31.79), matching the script's own
+# rounding chain rather than the full-precision value.
+zoom= 1.3
+A_LEN, B_LEN, C_LEN = 3.4*zoom, 6.1*zoom, 6.2*zoom
+SCALE = 0.35
+M = np.array([-1.5, -0.8, 0.0])
+N = M + np.array([B_LEN * SCALE, 0.0, 0.0])
+_x = (B_LEN**2 + C_LEN**2 - A_LEN**2) / (2 * B_LEN)
+_y = np.sqrt(C_LEN**2 - _x**2)
+L = M + np.array([_x * SCALE, _y * SCALE, 0.0])
+
+
+def angle_arc_at(vertex, point1, point2, radius):
+    """Small Arc marking the (non-reflex) interior angle at `vertex`
+    between rays to point1 and point2. Self-correcting -- same helper
+    used in cosine_rule_statement.py / cosine_rule_intro.py."""
+    vertex = np.array(vertex)
+    v1 = np.array(point1) - vertex
+    v2 = np.array(point2) - vertex
+    a1 = np.arctan2(v1[1], v1[0])
+    a2 = np.arctan2(v2[1], v2[0])
+    diff = (a2 - a1) % TAU
+    if diff > PI:
+        a1, diff = a2, TAU - diff
+    return Arc(radius=radius, start_angle=a1, angle=diff, arc_center=vertex)
+
+
+class CosineRuleExampleSSS(InteractiveScene):
+    def construct(self):
+        backdrop = Rectangle(width=FRAME_WIDTH + 0.5, height=FRAME_HEIGHT + 0.5)
+        backdrop.set_fill(WHITE, opacity=1).set_stroke(width=0)
+        self.add(backdrop)
+
+        # ============================================================
+        # Continuing from the SAS example: only the two headings
+        # remain. SSS is now emphasised, SAS greyed out -- the swap of
+        # the previous scene's colouring.
+        # ============================================================
+        sas_heading = Text("SAS", font_size=40).set_color(DEEMPHASIS_GREY)
+        sas_heading.move_to(np.array([-2.2, 3.3, 0.0]))
+        sss_heading = Text("SSS", font_size=40).set_color(EMPHASIS_BLUE)
+        sss_heading.move_to(np.array([2.2, 3.3, 0.0]))
+        self.add(sas_heading, sss_heading)
+        self.wait(0.5)
+
+        # ============================================================
+        # "Let's try another example, this time using the second case:
+        # SSS, where all three sides are given. We have a triangle
+        # with three known side lengths, and we need to find an angle
+        # LMN."
+        # ============================================================
+        side_a = Line(L, N).set_stroke(KNOWN_A_COLOR, width=4)
+        side_b = Line(M, N).set_stroke(KNOWN_B_COLOR, width=4)
+        side_c = Line(M, L).set_stroke(KNOWN_C_COLOR, width=4)
+
+        vertex_L = label_at("L", L + np.array([-0.15, 0.35, 0]), BLACK)
+        vertex_M = label_at("M", M + np.array([-0.3, -0.25, 0]), BLACK)
+        vertex_N = label_at("N", N + np.array([0.3, -0.25, 0]), BLACK)
+
+        val_a = label_at("3.4", (L + N) / 2 + np.array([0.35, 0.15, 0]), KNOWN_A_COLOR, font_size=30)
+        val_b = label_at("6.1", (M + N) / 2 + np.array([0.0, -0.35, 0]), KNOWN_B_COLOR, font_size=30)
+        val_c = label_at("6.2", (M + L) / 2 + np.array([-0.4, 0.05, 0]), KNOWN_C_COLOR, font_size=30)
+
+        angle_arc = angle_arc_at(M, N, L, radius=0.5).set_stroke(ANGLE_COLOR, width=2.5)
+        angle_q = Text("?", font_size=30).set_color(ANGLE_COLOR)
+        angle_q.move_to(M + np.array([0.65, 0.2, 0.0]))
+
+        self.play(ShowCreation(VGroup(side_a, side_b, side_c)))
+        self.play(Write(vertex_L), Write(vertex_M), Write(vertex_N))
+        self.play(Write(val_a), Write(val_b), Write(val_c))
+        self.play(ShowCreation(angle_arc), FadeIn(angle_q))
+        self.wait(1.5)
+
+        # ============================================================
+        # "First, let's label the angle we want to find as A. The side
+        # opposite this angle is then a, and the other two sides are b
+        # and c."
+        # ============================================================
+        label_A = label_at("A", angle_q.get_center(), ANGLE_COLOR, font_size=30)
+        letter_a = label_at("a", val_a.get_center() + np.array([0.55, 0.0, 0]), KNOWN_A_COLOR, font_size=28)
+        letter_b = label_at("b", val_b.get_center() + np.array([0.0, -0.4, 0]), KNOWN_B_COLOR, font_size=28)
+        letter_c = label_at("c", val_c.get_center() + np.array([-0.4, 0.0, 0]), KNOWN_C_COLOR, font_size=28)
+
+        self.play(ReplacementTransform(angle_q, label_A))
+        self.wait(0.3)
+        self.play(FadeIn(letter_a), FadeIn(letter_b), FadeIn(letter_c))
+        self.wait(1.5)
+
+        # ============================================================
+        # "Now, we know the cosine rule: a^2 = b^2 + c^2 - 2bc cos A."
+        # ============================================================
+        eq0 = Tex(
+            "a^2", "=", "b^2", "+", "c^2", "-", "2bc\\cos A", font_size=40, fill_color=BLACK,
+            tex_to_color_map={
+                "a^2": KNOWN_A_COLOR, "b^2": KNOWN_B_COLOR, "c^2": KNOWN_C_COLOR,
+                "2bc\\cos A": CORRECTION_COLOR,
+            },
+        )
+        eq0.move_to(np.array([3.0, 1.3, 0.0]))
+
+        traingle_group = VGroup(side_a, side_b, side_c, vertex_L, vertex_M, vertex_N, val_a, val_b, val_c, angle_arc, label_A, letter_a, letter_b, letter_c)
+        self.play(traingle_group.animate.shift(LEFT * 2))
+        self.play(Write(eq0))
+        self.wait(1.5)
+
+        # ============================================================
+        # "But this time, we don't know the angle A. So we need to
+        # rearrange the equation to make A the subject."
+        # ============================================================
+        bridge = Text("We don't know A -- rearrange for it", font_size=28).set_color(QUESTION_COLOR)
+        bridge.next_to(eq0, DOWN, buff=0.4)
+        self.play(Write(bridge))
+        self.wait(1.5)
+        self.play(FadeOut(bridge))
+
+        # ============================================================
+        # "First, subtract b^2+c^2 from both sides. This leaves us
+        # with only the cosine term product on the right side."
+        #
+        # b^2 and c^2 fly from their RHS position over to the LHS
+        # (picking up a minus sign), while the "+" and the old "="
+        # retire -- an explicit element-wise move rather than
+        # TransformMatchingTex, since the structural change (terms
+        # crossing the equals sign) is exactly the kind of edit that
+        # technique doesn't choreograph the way we want.
+        # ============================================================
+        eq1 = Tex(
+            "a^2", "-", "b^2", "-", "c^2", "=", "-2bc\\cos A", font_size=40, fill_color=BLACK,
+            tex_to_color_map={
+                "a^2": KNOWN_A_COLOR, "b^2": KNOWN_B_COLOR, "c^2": KNOWN_C_COLOR,
+                "-2bc\\cos A": CORRECTION_COLOR,
+            },
+        )
+        eq1.move_to(eq0)
+
+        self.play(
+            ReplacementTransform(eq0["a^2"], eq1["a^2"]),
+            FadeOut(eq0["="]),
+            TransformFromCopy(eq0["b^2"], eq1["b^2"]),
+            FadeOut(eq0["+"]),
+            TransformFromCopy(eq0["c^2"], eq1["c^2"]),
+            Write(eq1["-"]),
+            Write(eq1["="]),
+            ReplacementTransform(eq0["2bc\\cos A"], eq1["-2bc\\cos A"]),
+            FadeOut(eq0["b^2"]), FadeOut(eq0["c^2"]), FadeOut(eq0["-"]),
+            run_time=2.0,
+        )
+        self.wait(1.5)
+
+        # ============================================================
+        # "Now divide both sides by -2bc to isolate the cosine term."
+        # ============================================================
+        eq2 = Tex(
+            "\\frac{a^2-b^2-c^2}{-2bc}", "=", "\\cos A", font_size=40, fill_color=BLACK,
+            tex_to_color_map={"\\cos A": CORRECTION_COLOR},
+        )
+        eq2.move_to(eq0)
+        self.play(ReplacementTransform(eq1, eq2), run_time=1.6)
+        self.wait(1.5)
+
+        # ============================================================
+        # "And we can remove the negative sign from the denominator by
+        # multiplying the numerator and denominator by -1: cos A =
+        # (b^2+c^2-a^2)/(2bc). This is the rearranged form of the
+        # cosine rule that we can use directly."
+        # ============================================================
+        eq3 = Tex(
+            "\\frac{b^2+c^2-a^2}{2bc}", "=", "\\cos A", font_size=40, fill_color=BLACK,
+            tex_to_color_map={"\\cos A": CORRECTION_COLOR},
+        )
+        eq3.move_to(eq0)
+        self.play(ReplacementTransform(eq2, eq3), run_time=1.8)
+        self.wait(1)
+
+        final_box = SurroundingRectangle(eq3, buff=0.2).set_color(BLACK).set_stroke(width=1.5)
+        self.play(ShowCreation(final_box))
+        self.wait(1.5)
+        self.play(FadeOut(final_box))
+
+        # ============================================================
+        # "Now let's plug in our values. Taking the squares of 6.1,
+        # 6.2 and 3.4, then adding the first two and subtracting the
+        # third, gives us 64.09 in the numerator."
+        #
+        # Copies of the diagram's own numbers fly up to build the
+        # numerator, matching the substitution style established for
+        # the SAS example.
+        # ============================================================
+        self.play(eq3.animate.shift(UP * 0.4))
+
+        numerator_eq = Tex(
+            "6.1^2", "+", "6.2^2", "-", "3.4^2", "=", "64.09", font_size=38, fill_color=BLACK,
+            tex_to_color_map={
+                "6.1^2": KNOWN_B_COLOR, "6.2^2": KNOWN_C_COLOR, "3.4^2": KNOWN_A_COLOR,
+                "64.09": CORRECTION_COLOR,
+            },
+        )
+        numerator_eq.next_to(eq3, 2.5*DOWN, buff=0.8)
+
+        copy_b1 = val_b.copy()
+        copy_c1 = val_c.copy()
+        copy_a1 = val_a.copy()
+
+        self.play(Write(numerator_eq["+"]), Write(numerator_eq["-"]))
+        self.play(
+            ReplacementTransform(copy_b1, numerator_eq["6.1^2"]),
+            ReplacementTransform(copy_c1, numerator_eq["6.2^2"]),
+            ReplacementTransform(copy_a1, numerator_eq["3.4^2"]),
+            run_time=1.4,
+        )
+        self.wait(0.3)
+        self.play(Write(numerator_eq["="]), Write(numerator_eq["64.09"]))
+        self.wait(1.5)
+
+        # ============================================================
+        # "For the denominator, the product 2bc gives us 75.64."
+        # ============================================================
+        paren1 = Tex("2(", font_size=38, fill_color=BLACK)
+        slot_b = Tex("6.1", font_size=38).set_opacity(1)      # invisible placeholder
+        paren2 = Tex(")(", font_size=38, fill_color=BLACK)
+        slot_c = Tex("6.2", font_size=38).set_opacity(1)      # invisible placeholder
+        paren3 = Tex(")", font_size=38, fill_color=BLACK)
+        equals_sign = Tex("=", font_size=38, fill_color=BLACK)
+        result = Tex("75.64", font_size=38, fill_color=CORRECTION_COLOR)
+
+        denominator_eq = VGroup(paren1, slot_b, paren2, slot_c, paren3, equals_sign, result)
+        denominator_eq.arrange(RIGHT, buff=0.05)
+        denominator_eq.next_to(numerator_eq, DOWN, buff=0.5)
+
+        equals_sign.set_opacity(0)   # reveal these two later, same as before
+        result.set_opacity(0)
+
+        copy_b2 = val_b.copy()
+        copy_c2 = val_c.copy()
+
+        self.play(FadeIn(paren1), FadeIn(paren2), FadeIn(paren3))
+        self.play(
+            copy_b2.animate.replace(slot_b),
+            copy_c2.animate.replace(slot_c),
+            run_time=1.2,
+        )
+        self.play(equals_sign.animate.set_opacity(1), result.animate.set_opacity(1))
+        self.wait(1.5)
+
+        # ============================================================
+        # "Now resolving this fraction results in approximately 0.85."
+        # ============================================================
+        cos_value_eq = Tex(
+            "\\cos A", "\\thickspace", "=", "\\thickspace","\\frac{64.09}{75.64}", "\\thickspace" , "\\approx" , "\\thickspace" , "0.85", font_size=38, fill_color=BLACK,
+            tex_to_color_map={"\\cos A": CORRECTION_COLOR, "0.85": ANGLE_COLOR},
+        )
+        cos_value_eq.next_to(eq3, DOWN, buff=0.8)
+
+        self.play(FadeIn(cos_value_eq[5:10]), FadeIn(cos_value_eq[10:15]),
+          numerator_eq["64.09"].animate.replace(cos_value_eq["64.09"]).set_opacity(0),
+          result.animate.replace(cos_value_eq[11:15]).set_opacity(0),
+         )
+
+        self.play( FadeIn(cos_value_eq[0:5]), FadeIn(cos_value_eq[15:21]),
+            FadeOut(numerator_eq), FadeOut(denominator_eq), FadeOut(copy_b2), FadeOut(copy_c2),
+            run_time=1.6)
+        self.wait(1.5)
+        # #self.remove(cos_value_eq["64.09"], cos_value_eq["75.64"])  # remove the faded-out copies of the numbers, leaving only the visible ones
+        # ============================================================
+        # "And finally, to find A, we take the inverse cosine of both
+        # sides. So, the required angle is approximately 31.8
+        # degrees."
+        # ============================================================
+        final_answer_eq = Tex(
+            "A", "\\thickspace", "=", "\\thickspace","\\cos^{-1}(0.85)", "\\thickspace" , "\\approx" , "\\thickspace" , "31.8^\\circ", font_size=40, fill_color=BLACK,
+            tex_to_color_map={"A": ANGLE_COLOR, "31.8^\\circ": ANSWER_COLOR},
+        )
+        final_answer_eq.next_to(cos_value_eq, DOWN, buff=0.6)
+        self.play(Write(final_answer_eq), run_time=1.8)
+        self.wait(1.5)
+
+        answer_box = SurroundingRectangle(final_answer_eq["31.8^\\circ"], buff=0.12).set_color(ANSWER_COLOR)
+        answer_copy = final_answer_eq["31.8^\\circ"].copy().scale(0.75)
+
+        self.play(ShowCreation(answer_box))
+        self.wait(0.5)
+        self.play(answer_copy.animate.next_to(label_A, RIGHT, buff=0.35))
+        self.wait(2)
